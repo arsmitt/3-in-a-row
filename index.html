@@ -2,92 +2,97 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Игра</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: manipulation;
+            touch-action: pan-x pan-y;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
+            position: fixed;
+            padding: 0;
         }
         #gameContainer {
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 500px;
-            flex-grow: 1;
+            height: 100%;
+            padding: 10px 5px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         #gameStats {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             width: 100%;
             background-color: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
             backdrop-filter: blur(5px);
+            flex-shrink: 0;
         }
         .stats-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            min-width: 80px;
+            min-width: 70px;
         }
         .stats-value {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-top: 5px;
+            margin-top: 3px;
         }
         .hearts {
             display: flex;
-            gap: 5px;
-            margin-top: 5px;
+            gap: 4px;
+            margin-top: 3px;
         }
         .heart {
             color: #ff6b6b;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
         }
         #gameBoard {
-            width: 95vmin;
-            height: 95vmin;
-            max-width: 400px;
-            max-height: 400px;
+            width: 96vw;
+            max-width: 360px;
+            height: 96vw;
+            max-height: 360px;
             background-color: rgba(0, 0, 0, 0.4);
             border-radius: 10px;
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-template-rows: repeat(7, 1fr);
-            gap: 4px;
-            padding: 8px;
+            gap: 3px;
+            padding: 6px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            flex-shrink: 0;
         }
         .tile {
-            border-radius: 8px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            transition: transform 0.2s ease, opacity 0.2s ease;
             position: relative;
             will-change: transform;
+            touch-action: none;
         }
         .tile:active {
             transform: scale(0.95);
@@ -103,20 +108,20 @@
         
         /* Стили для подсветки области удаления */
         .highlight-red {
-            box-shadow: 0 0 0 4px #ff0000, inset 0 0 0 4px #ff0000;
+            box-shadow: 0 0 0 3px #ff0000, inset 0 0 0 3px #ff0000;
             animation: pulse-red 0.5s infinite alternate;
         }
         
         /* Стили для подсказки */
         .hint-highlight {
-            box-shadow: 0 0 0 4px #ffff00, inset 0 0 0 4px #ffff00;
+            box-shadow: 0 0 0 3px #ffff00, inset 0 0 0 3px #ffff00;
             animation: pulse-yellow 0.7s infinite alternate;
             z-index: 1;
         }
         
         /* Анимация для перемещения фигур */
         .tile-moving {
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 10;
         }
         
@@ -131,42 +136,47 @@
         }
         
         #controls {
-            margin-top: 25px;
+            margin-top: 15px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             flex-wrap: wrap;
             justify-content: center;
+            width: 100%;
+            flex-shrink: 0;
         }
         button {
             background-color: rgba(255, 255, 255, 0.2);
             border: 2px solid white;
             color: white;
-            padding: 12px 24px;
-            border-radius: 50px;
-            font-size: 1rem;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         button:hover, button:active {
             background-color: white;
             color: #2575fc;
         }
         #message {
-            margin-top: 20px;
-            font-size: 1.5rem;
-            min-height: 2rem;
+            margin-top: 12px;
+            font-size: 1.1rem;
+            min-height: 1.8rem;
             text-align: center;
-            padding: 10px;
+            padding: 8px;
+            width: 100%;
+            flex-shrink: 0;
         }
         .selected {
-            box-shadow: inset 0 0 0 3px white;
+            box-shadow: inset 0 0 0 2px white;
         }
         
         /* Стили для магазина */
         #shopButton {
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            padding: 12px 25px;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            padding: 10px 20px;
         }
         
         #shopOverlay {
@@ -176,32 +186,35 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.9);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            padding: 10px;
         }
         
         #shopWindow {
             background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            border-radius: 20px;
-            padding: 30px;
-            width: 90%;
-            max-width: 400px;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
         
         #shopWindow h2 {
-            margin-bottom: 25px;
-            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
         }
         
         .shopItem {
             background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -209,22 +222,25 @@
         
         .shopItemInfo {
             text-align: left;
+            flex: 1;
+            margin-right: 10px;
         }
         
         .shopItemName {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
         
         .shopItemPrice {
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             color: #FFD166;
         }
         
         .shopItemButton {
-            padding: 10px 20px;
-            font-size: 1rem;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            white-space: nowrap;
         }
         
         .shopItemButton:disabled {
@@ -233,9 +249,9 @@
         }
         
         #closeShop {
-            margin-top: 20px;
-            padding: 10px 30px;
-            font-size: 1.1rem;
+            margin-top: 15px;
+            padding: 8px 24px;
+            font-size: 1rem;
         }
         
         /* Стиль для кнопки перемешивания */
@@ -243,12 +259,12 @@
             background-color: rgba(255, 255, 255, 0.2);
             border: 2px solid white;
             color: white;
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-size: 1rem;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
             cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.3s ease;
+            margin-top: 8px;
+            transition: all 0.2s ease;
         }
         
         #shuffleButton:hover, #shuffleButton:active {
@@ -259,6 +275,48 @@
         #shuffleButton:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        /* Стили для телеграм WebApp */
+        @media (max-aspect-ratio: 9/17) {
+            #gameContainer {
+                padding: 5px;
+            }
+            
+            #gameStats {
+                padding: 8px;
+                margin-bottom: 8px;
+                font-size: 0.85rem;
+            }
+            
+            .stats-value {
+                font-size: 1rem;
+            }
+            
+            .heart {
+                font-size: 1.2rem;
+            }
+            
+            #gameBoard {
+                width: 95vw;
+                height: 95vw;
+                gap: 2px;
+                padding: 4px;
+            }
+            
+            .tile {
+                font-size: 1rem;
+            }
+            
+            button {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+            
+            #message {
+                font-size: 1rem;
+                padding: 6px;
+            }
         }
     </style>
 </head>
@@ -368,7 +426,8 @@
                 isCascade: false,
                 dragging: false,
                 dragStartPos: null,
-                dragCurrentPos: null
+                dragCurrentPos: null,
+                primaryAxis: null // 'horizontal' или 'vertical'
             };
 
             const gameBoard = document.getElementById('gameBoard');
@@ -401,6 +460,7 @@
                 gameState.lives = config.maxLives;
                 gameState.isCascade = false;
                 gameState.dragging = false;
+                gameState.primaryAxis = null;
                 createBoard();
                 updateUI();
                 updateHearts();
@@ -495,6 +555,7 @@
                 gameState.startTile = { row, col };
                 gameState.dragStartPos = { x: e.clientX, y: e.clientY };
                 gameState.dragCurrentPos = { x: e.clientX, y: e.clientY };
+                gameState.primaryAxis = null;
                 
                 const tile = getTileElement(row, col);
                 tile.classList.add('tile-moving');
@@ -513,6 +574,7 @@
                 const touch = e.touches[0];
                 gameState.dragStartPos = { x: touch.clientX, y: touch.clientY };
                 gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
+                gameState.primaryAxis = null;
                 
                 const tile = getTileElement(row, col);
                 tile.classList.add('tile-moving');
@@ -535,7 +597,20 @@
                 
                 e.preventDefault();
                 const touch = e.touches[0];
-                gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
+                const newPos = { x: touch.clientX, y: touch.clientY };
+                
+                // Определяем основное направление движения
+                if (!gameState.primaryAxis) {
+                    const deltaX = Math.abs(newPos.x - gameState.dragStartPos.x);
+                    const deltaY = Math.abs(newPos.y - gameState.dragStartPos.y);
+                    
+                    // Определяем основную ось после небольшого движения
+                    if (deltaX > 5 || deltaY > 5) {
+                        gameState.primaryAxis = deltaX > deltaY ? 'horizontal' : 'vertical';
+                    }
+                }
+                
+                gameState.dragCurrentPos = newPos;
                 updateTilePosition();
             }
 
@@ -551,8 +626,22 @@
                 
                 // Ограничиваем перемещение в пределах одной клетки
                 const maxMove = 60;
-                const moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
-                const moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
+                
+                // Если определена основная ось, ограничиваем движение по другой оси
+                let moveX = 0;
+                let moveY = 0;
+                
+                if (gameState.primaryAxis === 'horizontal') {
+                    moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
+                    moveY = 0; // Блокируем движение по вертикали
+                } else if (gameState.primaryAxis === 'vertical') {
+                    moveX = 0; // Блокируем движение по горизонтали
+                    moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
+                } else {
+                    // Если ось еще не определена, разрешаем движение по обеим осям
+                    moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
+                    moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
+                }
                 
                 tile.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1)`;
             }
@@ -587,21 +676,34 @@
                 
                 const deltaX = gameState.dragCurrentPos.x - gameState.dragStartPos.x;
                 const deltaY = gameState.dragCurrentPos.y - gameState.dragStartPos.y;
-                const minSwipeDistance = 30;
+                const minSwipeDistance = 25;
                 
                 let targetRow = gameState.startTile.row;
                 let targetCol = gameState.startTile.col;
                 
-                // Определяем направление свайпа
-                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Определяем направление свайпа на основе основной оси
+                if (gameState.primaryAxis === 'horizontal') {
                     // Горизонтальный свайп
                     if (Math.abs(deltaX) > minSwipeDistance) {
                         targetCol += deltaX > 0 ? 1 : -1;
                     }
-                } else {
+                } else if (gameState.primaryAxis === 'vertical') {
                     // Вертикальный свайп
                     if (Math.abs(deltaY) > minSwipeDistance) {
                         targetRow += deltaY > 0 ? 1 : -1;
+                    }
+                } else {
+                    // Если ось не определена, используем общее направление
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        // Горизонтальный свайп
+                        if (Math.abs(deltaX) > minSwipeDistance) {
+                            targetCol += deltaX > 0 ? 1 : -1;
+                        }
+                    } else {
+                        // Вертикальный свайп
+                        if (Math.abs(deltaY) > minSwipeDistance) {
+                            targetRow += deltaY > 0 ? 1 : -1;
+                        }
                     }
                 }
                 
@@ -615,6 +717,7 @@
                     // Если свайп не привел к обмену, просто сбрасываем состояние
                     gameState.dragging = false;
                     gameState.startTile = null;
+                    gameState.primaryAxis = null;
                 }
             }
 
@@ -662,7 +765,6 @@
                         updateShopButtons();
                     } else {
                         // Если совпадений нет, возвращаем фигуры на свои места
-                        // Без анимации возврата - сразу меняем обратно
                         const tempBack = gameState.board[first.row][first.col];
                         gameState.board[first.row][first.col] = gameState.board[second.row][second.col];
                         gameState.board[second.row][second.col] = tempBack;
@@ -673,6 +775,11 @@
                         gameState.isSwapping = false;
                         showMessage('Попробуй еще!');
                     }
+                    
+                    // Сбрасываем состояние драга
+                    gameState.dragging = false;
+                    gameState.startTile = null;
+                    gameState.primaryAxis = null;
                 }, 300);
             }
 
