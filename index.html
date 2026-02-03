@@ -2,47 +2,48 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Игра</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: pan-x pan-y;
-            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
-            height: 100vh;
-            width: 100vw;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
             overflow: hidden;
-            position: fixed;
-            padding: 0;
         }
         #gameContainer {
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
-            height: 100%;
-            padding: 10px 5px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            max-width: 500px;
+            flex-grow: 1;
+            justify-content: space-between;
+            height: calc(100vh - 20px);
+            max-height: 2048px;
         }
         #gameStats {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-around;
             width: 100%;
             background-color: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            font-size: 0.9rem;
+            padding: 12px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            font-size: 1rem;
             backdrop-filter: blur(5px);
-            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         .stats-item {
             display: flex;
@@ -52,69 +53,123 @@
             min-width: 70px;
         }
         .stats-value {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            margin-top: 3px;
+            margin-top: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         .hearts {
             display: flex;
-            gap: 4px;
-            margin-top: 3px;
+            gap: 3px;
+            margin-top: 5px;
         }
         .heart {
             color: #ff6b6b;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         #gameBoard {
-            width: 96vw;
-            max-width: 360px;
-            height: 96vw;
-            max-height: 360px;
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 350px;
+            max-height: 350px;
             background-color: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
+            border-radius: 12px;
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-template-rows: repeat(7, 1fr);
-            gap: 3px;
-            padding: 6px;
+            gap: 4px;
+            padding: 8px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            flex-shrink: 0;
+            position: relative;
         }
         .tile {
-            border-radius: 6px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.2s ease, opacity 0.2s ease;
+            transition: transform 0.2s ease, opacity 0.3s ease, box-shadow 0.3s ease;
             position: relative;
             will-change: transform;
-            touch-action: none;
+            /* Тень и блики для квадратов */
+            box-shadow: 
+                inset 0 -4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 4px 8px rgba(255, 255, 255, 0.2),
+                0 4px 8px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+        .tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+            border-radius: 10px 10px 0 0;
+            pointer-events: none;
+        }
+        .tile::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent);
+            border-radius: 0 0 10px 10px;
+            pointer-events: none;
         }
         .tile:active {
-            transform: scale(0.95);
+            transform: scale(0.92);
+            box-shadow: 
+                inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.2),
+                0 2px 6px rgba(0, 0, 0, 0.3);
         }
-        /* Цвета фигур */
-        .type0 { background-color: rgb(237, 28, 36); }
-        .type1 { background-color: rgb(255, 127, 39); }
-        .type2 { background-color: rgb(255, 242, 0); }
-        .type3 { background-color: rgb(34, 177, 76); }
-        .type4 { background-color: rgb(0, 162, 232); }
-        .type5 { background-color: rgb(63, 72, 204); }
-        .type6 { background-color: rgb(163, 73, 164); }
+        /* Цвета фигур с улучшенными градиентами */
+        .type0 { 
+            background: linear-gradient(135deg, rgb(237, 28, 36) 0%, rgb(200, 20, 30) 100%);
+        }
+        .type1 { 
+            background: linear-gradient(135deg, rgb(255, 127, 39) 0%, rgb(220, 100, 20) 100%);
+        }
+        .type2 { 
+            background: linear-gradient(135deg, rgb(255, 242, 0) 0%, rgb(220, 210, 0) 100%);
+        }
+        .type3 { 
+            background: linear-gradient(135deg, rgb(34, 177, 76) 0%, rgb(25, 150, 60) 100%);
+        }
+        .type4 { 
+            background: linear-gradient(135deg, rgb(0, 162, 232) 0%, rgb(0, 130, 200) 100%);
+        }
+        .type5 { 
+            background: linear-gradient(135deg, rgb(63, 72, 204) 0%, rgb(50, 60, 180) 100%);
+        }
+        .type6 { 
+            background: linear-gradient(135deg, rgb(163, 73, 164) 0%, rgb(140, 60, 140) 100%);
+        }
         
         /* Стили для подсветки области удаления */
         .highlight-red {
-            box-shadow: 0 0 0 3px #ff0000, inset 0 0 0 3px #ff0000;
+            box-shadow: 
+                0 0 0 4px #ff0000, 
+                inset 0 0 0 4px #ff0000,
+                0 0 20px rgba(255, 0, 0, 0.7) !important;
             animation: pulse-red 0.5s infinite alternate;
+            z-index: 2;
         }
         
         /* Стили для подсказки */
         .hint-highlight {
-            box-shadow: 0 0 0 3px #ffff00, inset 0 0 0 3px #ffff00;
+            box-shadow: 
+                0 0 0 4px #ffff00, 
+                inset 0 0 0 4px #ffff00,
+                0 0 20px rgba(255, 255, 0, 0.7) !important;
             animation: pulse-yellow 0.7s infinite alternate;
             z-index: 1;
         }
@@ -123,16 +178,40 @@
         .tile-moving {
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 10;
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                inset 0 -4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 4px 8px rgba(255, 255, 255, 0.3) !important;
         }
         
         @keyframes pulse-red {
-            from { opacity: 1; }
-            to { opacity: 0.6; }
+            from { 
+                box-shadow: 
+                    0 0 0 4px #ff0000, 
+                    inset 0 0 0 4px #ff0000,
+                    0 0 20px rgba(255, 0, 0, 0.7) !important;
+            }
+            to { 
+                box-shadow: 
+                    0 0 0 4px #ff0000, 
+                    inset 0 0 0 4px #ff0000,
+                    0 0 30px rgba(255, 0, 0, 1) !important;
+            }
         }
         
         @keyframes pulse-yellow {
-            from { opacity: 1; }
-            to { opacity: 0.5; }
+            from { 
+                box-shadow: 
+                    0 0 0 4px #ffff00, 
+                    inset 0 0 0 4px #ffff00,
+                    0 0 20px rgba(255, 255, 0, 0.7) !important;
+            }
+            to { 
+                box-shadow: 
+                    0 0 0 4px #ffff00, 
+                    inset 0 0 0 4px #ffff00,
+                    0 0 30px rgba(255, 255, 0, 1) !important;
+            }
         }
         
         #controls {
@@ -142,41 +221,54 @@
             flex-wrap: wrap;
             justify-content: center;
             width: 100%;
-            flex-shrink: 0;
         }
         button {
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px solid white;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 10px 18px;
-            border-radius: 25px;
-            font-size: 0.9rem;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 0.95rem;
             cursor: pointer;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            min-height: 44px;
         }
         button:hover, button:active {
-            background-color: white;
+            background: white;
             color: #2575fc;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
         #message {
-            margin-top: 12px;
+            margin-top: 15px;
             font-size: 1.1rem;
             min-height: 1.8rem;
             text-align: center;
             padding: 8px;
             width: 100%;
-            flex-shrink: 0;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         .selected {
-            box-shadow: inset 0 0 0 2px white;
+            box-shadow: 
+                inset 0 0 0 3px white,
+                0 0 20px rgba(255, 255, 255, 0.5) !important;
         }
         
         /* Стили для магазина */
         #shopButton {
-            margin-bottom: 12px;
-            font-size: 1rem;
-            padding: 10px 20px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            padding: 12px 25px;
+            width: 90%;
+            max-width: 300px;
         }
         
         #shopOverlay {
@@ -191,23 +283,26 @@
             justify-content: center;
             align-items: center;
             padding: 10px;
+            overflow-y: auto;
         }
         
         #shopWindow {
             background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 20px;
-            width: 100%;
-            max-width: 360px;
-            max-height: 90vh;
+            width: 95%;
+            max-width: 380px;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
         
         #shopWindow h2 {
             margin-bottom: 20px;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .shopItem {
@@ -218,6 +313,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .shopItemInfo {
@@ -229,94 +326,119 @@
         .shopItemName {
             font-size: 1.1rem;
             font-weight: bold;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
         
         .shopItemPrice {
-            font-size: 0.95rem;
+            font-size: 1rem;
             color: #FFD166;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            margin-bottom: 6px;
+        }
+        
+        .shopItemInfo div:last-child {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            line-height: 1.3;
         }
         
         .shopItemButton {
             padding: 8px 16px;
             font-size: 0.9rem;
             white-space: nowrap;
-        }
-        
-        .shopItemButton:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            min-width: 80px;
         }
         
         #closeShop {
             margin-top: 15px;
-            padding: 8px 24px;
+            padding: 10px 25px;
             font-size: 1rem;
+            width: 100%;
         }
         
         /* Стиль для кнопки перемешивания */
         #shuffleButton {
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px solid white;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 8px 16px;
-            border-radius: 25px;
+            padding: 10px 20px;
+            border-radius: 50px;
             font-size: 0.9rem;
             cursor: pointer;
-            margin-top: 8px;
-            transition: all 0.2s ease;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            min-height: 44px;
         }
         
         #shuffleButton:hover, #shuffleButton:active {
-            background-color: white;
+            background: white;
             color: #2575fc;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
         }
         
         #shuffleButton:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
         
-        /* Стили для телеграм WebApp */
-        @media (max-aspect-ratio: 9/17) {
-            #gameContainer {
-                padding: 5px;
-            }
-            
-            #gameStats {
-                padding: 8px;
-                margin-bottom: 8px;
-                font-size: 0.85rem;
-            }
-            
-            .stats-value {
-                font-size: 1rem;
-            }
-            
-            .heart {
-                font-size: 1.2rem;
-            }
-            
+        /* Медиа-запросы для адаптации под разные экраны */
+        @media (max-height: 800px) {
             #gameBoard {
-                width: 95vw;
-                height: 95vw;
-                gap: 2px;
-                padding: 4px;
+                max-width: 300px;
+                max-height: 300px;
             }
-            
-            .tile {
-                font-size: 1rem;
+            #gameStats {
+                padding: 10px;
+                font-size: 0.9rem;
             }
-            
+            .stats-item {
+                min-width: 60px;
+            }
+            .stats-value {
+                font-size: 1.1rem;
+            }
+            .heart {
+                font-size: 1.3rem;
+            }
+        }
+        
+        @media (max-height: 700px) {
+            #gameBoard {
+                max-width: 280px;
+                max-height: 280px;
+            }
             button {
-                padding: 8px 14px;
-                font-size: 0.85rem;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+                min-height: 40px;
             }
-            
-            #message {
-                font-size: 1rem;
-                padding: 6px;
+            #shopWindow {
+                padding: 15px;
             }
+            .shopItem {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+        }
+        
+        /* Улучшенная прокрутка для магазина */
+        #shopWindow::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #shopWindow::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        #shopWindow::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -426,8 +548,7 @@
                 isCascade: false,
                 dragging: false,
                 dragStartPos: null,
-                dragCurrentPos: null,
-                primaryAxis: null // 'horizontal' или 'vertical'
+                dragCurrentPos: null
             };
 
             const gameBoard = document.getElementById('gameBoard');
@@ -460,7 +581,6 @@
                 gameState.lives = config.maxLives;
                 gameState.isCascade = false;
                 gameState.dragging = false;
-                gameState.primaryAxis = null;
                 createBoard();
                 updateUI();
                 updateHearts();
@@ -487,9 +607,9 @@
                 let hearts = '';
                 for (let i = 0; i < config.maxLives; i++) {
                     if (i < gameState.lives) {
-                        hearts += '♥ ';
+                        hearts += '<span class="heart">♥</span>';
                     } else {
-                        hearts += '♡ ';
+                        hearts += '<span class="heart" style="opacity:0.3">♡</span>';
                     }
                 }
                 heartsElement.innerHTML = hearts;
@@ -522,17 +642,7 @@
                 // Отрисовка поля 7x7
                 for (let r = 0; r < config.rows; r++) {
                     for (let c = 0; c < config.cols; c++) {
-                        const tile = document.createElement('div');
-                        tile.className = `tile type${gameState.board[r][c]}`;
-                        tile.dataset.row = r;
-                        tile.dataset.col = c;
-                        tile.dataset.type = gameState.board[r][c];
-                        
-                        // Обработчики для свайпа
-                        tile.addEventListener('mousedown', (e) => onTileMouseDown(e, r, c));
-                        tile.addEventListener('touchstart', (e) => onTileTouchStart(e, r, c), { passive: false });
-                        tile.addEventListener('click', () => onTileClick(r, c));
-                        
+                        const tile = createTileElement(r, c, gameState.board[r][c]);
                         gameBoard.appendChild(tile);
                     }
                 }
@@ -546,6 +656,22 @@
                 }, 500);
             }
 
+            // Создание элемента фигуры
+            function createTileElement(row, col, type) {
+                const tile = document.createElement('div');
+                tile.className = `tile type${type}`;
+                tile.dataset.row = row;
+                tile.dataset.col = col;
+                tile.dataset.type = type;
+                
+                // Обработчики для свайпа
+                tile.addEventListener('mousedown', (e) => onTileMouseDown(e, row, col));
+                tile.addEventListener('touchstart', (e) => onTileTouchStart(e, row, col), { passive: false });
+                tile.addEventListener('click', () => onTileClick(row, col));
+                
+                return tile;
+            }
+
             // Обработка начала свайпа (мышь)
             function onTileMouseDown(e, row, col) {
                 if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus) return;
@@ -555,7 +681,6 @@
                 gameState.startTile = { row, col };
                 gameState.dragStartPos = { x: e.clientX, y: e.clientY };
                 gameState.dragCurrentPos = { x: e.clientX, y: e.clientY };
-                gameState.primaryAxis = null;
                 
                 const tile = getTileElement(row, col);
                 tile.classList.add('tile-moving');
@@ -574,7 +699,6 @@
                 const touch = e.touches[0];
                 gameState.dragStartPos = { x: touch.clientX, y: touch.clientY };
                 gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
-                gameState.primaryAxis = null;
                 
                 const tile = getTileElement(row, col);
                 tile.classList.add('tile-moving');
@@ -597,20 +721,7 @@
                 
                 e.preventDefault();
                 const touch = e.touches[0];
-                const newPos = { x: touch.clientX, y: touch.clientY };
-                
-                // Определяем основное направление движения
-                if (!gameState.primaryAxis) {
-                    const deltaX = Math.abs(newPos.x - gameState.dragStartPos.x);
-                    const deltaY = Math.abs(newPos.y - gameState.dragStartPos.y);
-                    
-                    // Определяем основную ось после небольшого движения
-                    if (deltaX > 5 || deltaY > 5) {
-                        gameState.primaryAxis = deltaX > deltaY ? 'horizontal' : 'vertical';
-                    }
-                }
-                
-                gameState.dragCurrentPos = newPos;
+                gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
                 updateTilePosition();
             }
 
@@ -624,26 +735,21 @@
                 const deltaX = gameState.dragCurrentPos.x - gameState.dragStartPos.x;
                 const deltaY = gameState.dragCurrentPos.y - gameState.dragStartPos.y;
                 
-                // Ограничиваем перемещение в пределах одной клетки
+                // Ограничиваем перемещение в пределах одной клетки и по осям
                 const maxMove = 60;
-                
-                // Если определена основная ось, ограничиваем движение по другой оси
                 let moveX = 0;
                 let moveY = 0;
                 
-                if (gameState.primaryAxis === 'horizontal') {
+                // Определяем основное направление движения
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Горизонтальное движение
                     moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
-                    moveY = 0; // Блокируем движение по вертикали
-                } else if (gameState.primaryAxis === 'vertical') {
-                    moveX = 0; // Блокируем движение по горизонтали
-                    moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
                 } else {
-                    // Если ось еще не определена, разрешаем движение по обеим осям
-                    moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
+                    // Вертикальное движение
                     moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
                 }
                 
-                tile.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1)`;
+                tile.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.05)`;
             }
 
             // Обработка отпускания мыши
@@ -681,29 +787,16 @@
                 let targetRow = gameState.startTile.row;
                 let targetCol = gameState.startTile.col;
                 
-                // Определяем направление свайпа на основе основной оси
-                if (gameState.primaryAxis === 'horizontal') {
+                // Определяем направление свайпа (только по осям)
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
                     // Горизонтальный свайп
                     if (Math.abs(deltaX) > minSwipeDistance) {
                         targetCol += deltaX > 0 ? 1 : -1;
                     }
-                } else if (gameState.primaryAxis === 'vertical') {
+                } else {
                     // Вертикальный свайп
                     if (Math.abs(deltaY) > minSwipeDistance) {
                         targetRow += deltaY > 0 ? 1 : -1;
-                    }
-                } else {
-                    // Если ось не определена, используем общее направление
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        // Горизонтальный свайп
-                        if (Math.abs(deltaX) > minSwipeDistance) {
-                            targetCol += deltaX > 0 ? 1 : -1;
-                        }
-                    } else {
-                        // Вертикальный свайп
-                        if (Math.abs(deltaY) > minSwipeDistance) {
-                            targetRow += deltaY > 0 ? 1 : -1;
-                        }
                     }
                 }
                 
@@ -717,7 +810,6 @@
                     // Если свайп не привел к обмену, просто сбрасываем состояние
                     gameState.dragging = false;
                     gameState.startTile = null;
-                    gameState.primaryAxis = null;
                 }
             }
 
@@ -725,6 +817,7 @@
             function animateSwap(first, second) {
                 if (gameState.isSwapping) return;
                 gameState.isSwapping = true;
+                gameState.dragging = false;
                 
                 const firstTile = getTileElement(first.row, first.col);
                 const secondTile = getTileElement(second.row, second.col);
@@ -737,8 +830,8 @@
                 firstTile.style.transition = 'transform 0.3s ease';
                 secondTile.style.transition = 'transform 0.3s ease';
                 
-                firstTile.style.transform = `translate(${dx}%, ${dy}%)`;
-                secondTile.style.transform = `translate(${-dx}%, ${-dy}%)`;
+                firstTile.style.transform = `translate(${dx}%, ${dy}%) scale(1.05)`;
+                secondTile.style.transform = `translate(${-dx}%, ${-dy}%) scale(1.05)`;
                 
                 // После анимации меняем фигуры местами
                 setTimeout(() => {
@@ -750,10 +843,14 @@
                     // Обновляем визуальное отображение
                     firstTile.className = `tile type${gameState.board[first.row][first.col]}`;
                     secondTile.className = `tile type${gameState.board[second.row][second.col]}`;
+                    firstTile.dataset.type = gameState.board[first.row][first.col];
+                    secondTile.dataset.type = gameState.board[second.row][second.col];
                     
                     // Сбрасываем трансформации
                     firstTile.style.transform = '';
                     secondTile.style.transform = '';
+                    firstTile.style.transition = '';
+                    secondTile.style.transition = '';
                     
                     // Проверяем совпадения
                     const matches = findMatches();
@@ -765,21 +862,21 @@
                         updateShopButtons();
                     } else {
                         // Если совпадений нет, возвращаем фигуры на свои места
-                        const tempBack = gameState.board[first.row][first.col];
-                        gameState.board[first.row][first.col] = gameState.board[second.row][second.col];
-                        gameState.board[second.row][second.col] = tempBack;
-                        
-                        firstTile.className = `tile type${gameState.board[first.row][first.col]}`;
-                        secondTile.className = `tile type${gameState.board[second.row][second.col]}`;
-                        
-                        gameState.isSwapping = false;
-                        showMessage('Попробуй еще!');
+                        setTimeout(() => {
+                            // Снова меняем местами
+                            const tempBack = gameState.board[first.row][first.col];
+                            gameState.board[first.row][first.col] = gameState.board[second.row][second.col];
+                            gameState.board[second.row][second.col] = tempBack;
+                            
+                            firstTile.className = `tile type${gameState.board[first.row][first.col]}`;
+                            secondTile.className = `tile type${gameState.board[second.row][second.col]}`;
+                            firstTile.dataset.type = gameState.board[first.row][first.col];
+                            secondTile.dataset.type = gameState.board[second.row][second.col];
+                            
+                            gameState.isSwapping = false;
+                            showMessage('Попробуй еще!');
+                        }, 300);
                     }
-                    
-                    // Сбрасываем состояние драга
-                    gameState.dragging = false;
-                    gameState.startTile = null;
-                    gameState.primaryAxis = null;
                 }, 300);
             }
 
@@ -1121,7 +1218,7 @@
                     tile.className = `tile type${type}`;
                     tile.dataset.type = type;
                     tile.style.opacity = '1';
-                    tile.classList.remove('highlight-red', 'hint-highlight');
+                    tile.classList.remove('highlight-red', 'hint-highlight', 'selected');
                 }
             }
 
