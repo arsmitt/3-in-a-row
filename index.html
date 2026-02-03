@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Игра</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: sans-serif;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            flex-grow: 1;
+        }
+        #gameStats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            backdrop-filter: blur(5px);
+        }
+        .stats-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-width: 80px;
+        }
+        .stats-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .hearts {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .heart {
+            color: #ff6b6b;
+            font-size: 1.8rem;
+        }
+        #gameBoard {
+            width: 95vmin;
+            height: 95vmin;
+            max-width: 400px;
+            max-height: 400px;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 4px;
+            padding: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        .tile {
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            position: relative;
+            will-change: transform;
+        }
+        .tile:active {
+            transform: scale(0.95);
+        }
+        /* Цвета фигур */
+        .type0 { background-color: rgb(237, 28, 36); }
+        .type1 { background-color: rgb(255, 127, 39); }
+        .type2 { background-color: rgb(255, 242, 0); }
+        .type3 { background-color: rgb(34, 177, 76); }
+        .type4 { background-color: rgb(0, 162, 232); }
+        .type5 { background-color: rgb(63, 72, 204); }
+        .type6 { background-color: rgb(163, 73, 164); }
+        
+        /* Стили для подсветки области удаления */
+        .highlight-red {
+            box-shadow: 0 0 0 4px #ff0000, inset 0 0 0 4px #ff0000;
+            animation: pulse-red 0.5s infinite alternate;
+        }
+        
+        /* Стили для подсказки */
+        .hint-highlight {
+            box-shadow: 0 0 0 4px #ffff00, inset 0 0 0 4px #ffff00;
+            animation: pulse-yellow 0.7s infinite alternate;
+            z-index: 1;
+        }
+        
+        /* Анимация для перемещения фигур */
+        .tile-moving {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+        
+        @keyframes pulse-red {
+            from { opacity: 1; }
+            to { opacity: 0.6; }
+        }
+        
+        @keyframes pulse-yellow {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+        
+        #controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover, button:active {
+            background-color: white;
+            color: #2575fc;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            min-height: 2rem;
+            text-align: center;
+            padding: 10px;
+        }
+        .selected {
+            box-shadow: inset 0 0 0 3px white;
+        }
+        
+        /* Стили для магазина */
+        #shopButton {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            padding: 12px 25px;
+        }
+        
+        #shopOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #shopWindow {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        
+        #shopWindow h2 {
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+        
+        .shopItem {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .shopItemInfo {
+            text-align: left;
+        }
+        
+        .shopItemName {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .shopItemPrice {
+            font-size: 1.1rem;
+            color: #FFD166;
+        }
+        
+        .shopItemButton {
+            padding: 10px 20px;
+            font-size: 1rem;
+        }
+        
+        .shopItemButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #closeShop {
+            margin-top: 20px;
+            padding: 10px 30px;
+            font-size: 1.1rem;
+        }
+        
+        /* Стиль для кнопки перемешивания */
+        #shuffleButton {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        #shuffleButton:hover, #shuffleButton:active {
+            background-color: white;
+            color: #2575fc;
+        }
+        
+        #shuffleButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <button id="shopButton">Магазин</button>
+        <div id="gameStats">
+            <div class="stats-item">
+                <div>Максимум</div>
+                <div class="stats-value" id="maxScore">0</div>
+            </div>
+            <div class="stats-item">
+                <div>Текущие</div>
+                <div class="stats-value" id="currentScore">0</div>
+            </div>
+            <div class="stats-item">
+                <div>Жизни</div>
+                <div class="hearts" id="hearts">♥ ♥ ♥</div>
+            </div>
+        </div>
+        <div id="gameBoard"></div>
+        <div id="message">Свайпай фигуры!</div>
+        <div id="controls">
+            <button id="hintBtn">Подсказка (-1 жизнь)</button>
+            <button id="resetBtn">Новая игра</button>
+        </div>
+        <button id="shuffleButton" style="display: none;">Перемешать поле (-1 жизнь)</button>
+    </div>
+    
+    <!-- Оверлей магазина -->
+    <div id="shopOverlay">
+        <div id="shopWindow">
+            <h2>Магазин</h2>
+            <div class="shopItem">
+                <div class="shopItemInfo">
+                    <div class="shopItemName">Удалить строку</div>
+                    <div class="shopItemPrice">1000 очков</div>
+                    <div>Удаляет всю выбранную строку</div>
+                </div>
+                <button class="shopItemButton" id="buyRow">Купить</button>
+            </div>
+            <div class="shopItem">
+                <div class="shopItemInfo">
+                    <div class="shopItemName">Удалить столбец</div>
+                    <div class="shopItemPrice">1000 очков</div>
+                    <div>Удаляет весь выбранный столбец</div>
+                </div>
+                <button class="shopItemButton" id="buyColumn">Купить</button>
+            </div>
+            <div class="shopItem">
+                <div class="shopItemInfo">
+                    <div class="shopItemName">Бомба</div>
+                    <div class="shopItemPrice">1500 очков</div>
+                    <div>Удаляет область 3x3 клетки</div>
+                </div>
+                <button class="shopItemButton" id="buyBomb">Купить</button>
+            </div>
+            <div class="shopItem">
+                <div class="shopItemInfo">
+                    <div class="shopItemName">Удаление крестом</div>
+                    <div class="shopItemPrice">2000 очков</div>
+                    <div>Удаляет клетки крестом</div>
+                </div>
+                <button class="shopItemButton" id="buyCross">Купить</button>
+            </div>
+            <div class="shopItem">
+                <div class="shopItemInfo">
+                    <div class="shopItemName">Жизнь</div>
+                    <div class="shopItemPrice">5000 очков</div>
+                    <div>Восстанавливает одну жизнь</div>
+                </div>
+                <button class="shopItemButton" id="buyLife">Купить</button>
+            </div>
+            <button id="closeShop">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Конфигурация игры
+            const config = {
+                rows: 7,
+                cols: 7,
+                tileTypes: 7,
+                maxLives: 3,
+                pointsPerTile: 10,
+                pointsPerCascadeTile: 20
+            };
+
+            // Состояние игры
+            let gameState = {
+                score: 0,
+                maxScore: 0,
+                board: [],
+                selectedTile: null,
+                isSwapping: false,
+                touchStartX: 0,
+                touchStartY: 0,
+                startTile: null,
+                activeBonus: null,
+                bombCount: 0,
+                columnCount: 0,
+                rowCount: 0,
+                crossCount: 0,
+                gameActive: true,
+                lives: config.maxLives,
+                isCascade: false,
+                dragging: false,
+                dragStartPos: null,
+                dragCurrentPos: null
+            };
+
+            const gameBoard = document.getElementById('gameBoard');
+            const currentScoreElement = document.getElementById('currentScore');
+            const maxScoreElement = document.getElementById('maxScore');
+            const messageElement = document.getElementById('message');
+            const heartsElement = document.getElementById('hearts');
+            const resetBtn = document.getElementById('resetBtn');
+            const hintBtn = document.getElementById('hintBtn');
+            const shopButton = document.getElementById('shopButton');
+            const shopOverlay = document.getElementById('shopOverlay');
+            const closeShop = document.getElementById('closeShop');
+            const buyBombBtn = document.getElementById('buyBomb');
+            const buyColumnBtn = document.getElementById('buyColumn');
+            const buyRowBtn = document.getElementById('buyRow');
+            const buyCrossBtn = document.getElementById('buyCross');
+            const buyLifeBtn = document.getElementById('buyLife');
+            const shuffleButton = document.getElementById('shuffleButton');
+
+            // Инициализация игры
+            function initGame() {
+                gameState.score = 0;
+                gameState.selectedTile = null;
+                gameState.activeBonus = null;
+                gameState.bombCount = 0;
+                gameState.columnCount = 0;
+                gameState.rowCount = 0;
+                gameState.crossCount = 0;
+                gameState.gameActive = true;
+                gameState.lives = config.maxLives;
+                gameState.isCascade = false;
+                gameState.dragging = false;
+                createBoard();
+                updateUI();
+                updateHearts();
+                showMessage('Игра началась! Меняй фигуры местами.');
+                updateShopButtons();
+                shuffleButton.style.display = 'none';
+                shuffleButton.disabled = false;
+                hintBtn.disabled = false;
+                
+                // Сохраняем максимальный счет
+                saveMaxScore();
+            }
+
+            // Сохранение максимального счета
+            function saveMaxScore() {
+                if (gameState.score > gameState.maxScore) {
+                    gameState.maxScore = gameState.score;
+                    updateUI();
+                }
+            }
+
+            // Обновление отображения жизней
+            function updateHearts() {
+                let hearts = '';
+                for (let i = 0; i < config.maxLives; i++) {
+                    if (i < gameState.lives) {
+                        hearts += '♥ ';
+                    } else {
+                        hearts += '♡ ';
+                    }
+                }
+                heartsElement.innerHTML = hearts;
+                
+                // Обновляем состояние кнопок
+                hintBtn.disabled = gameState.lives <= 0;
+                shuffleButton.disabled = gameState.lives <= 0;
+                
+                // Обновляем кнопку покупки жизни
+                updateShopButtons();
+            }
+
+            // Создание игрового поля 7x7
+            function createBoard() {
+                gameBoard.innerHTML = '';
+                gameState.board = [];
+
+                // Создаем двумерный массив поля 7x7
+                for (let r = 0; r < config.rows; r++) {
+                    gameState.board[r] = [];
+                    for (let c = 0; c < config.cols; c++) {
+                        let type;
+                        do {
+                            type = Math.floor(Math.random() * config.tileTypes);
+                        } while (hasInitialMatch(r, c, type));
+                        gameState.board[r][c] = type;
+                    }
+                }
+
+                // Отрисовка поля 7x7
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        const tile = document.createElement('div');
+                        tile.className = `tile type${gameState.board[r][c]}`;
+                        tile.dataset.row = r;
+                        tile.dataset.col = c;
+                        tile.dataset.type = gameState.board[r][c];
+                        
+                        // Обработчики для свайпа
+                        tile.addEventListener('mousedown', (e) => onTileMouseDown(e, r, c));
+                        tile.addEventListener('touchstart', (e) => onTileTouchStart(e, r, c), { passive: false });
+                        tile.addEventListener('click', () => onTileClick(r, c));
+                        
+                        gameBoard.appendChild(tile);
+                    }
+                }
+                
+                // После создания проверяем наличие возможных ходов
+                setTimeout(() => {
+                    if (!hasPossibleMoves()) {
+                        showMessage('Нет возможных ходов. Перемешиваем поле...');
+                        shuffleBoard();
+                    }
+                }, 500);
+            }
+
+            // Обработка начала свайпа (мышь)
+            function onTileMouseDown(e, row, col) {
+                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus) return;
+                
+                e.preventDefault();
+                gameState.dragging = true;
+                gameState.startTile = { row, col };
+                gameState.dragStartPos = { x: e.clientX, y: e.clientY };
+                gameState.dragCurrentPos = { x: e.clientX, y: e.clientY };
+                
+                const tile = getTileElement(row, col);
+                tile.classList.add('tile-moving');
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            }
+
+            // Обработка начала свайпа (тач)
+            function onTileTouchStart(e, row, col) {
+                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus) return;
+                
+                e.preventDefault();
+                gameState.dragging = true;
+                gameState.startTile = { row, col };
+                const touch = e.touches[0];
+                gameState.dragStartPos = { x: touch.clientX, y: touch.clientY };
+                gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
+                
+                const tile = getTileElement(row, col);
+                tile.classList.add('tile-moving');
+                
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onTouchEnd);
+            }
+
+            // Обработка движения мыши при свайпе
+            function onMouseMove(e) {
+                if (!gameState.dragging) return;
+                
+                gameState.dragCurrentPos = { x: e.clientX, y: e.clientY };
+                updateTilePosition();
+            }
+
+            // Обработка движения пальца при свайпе
+            function onTouchMove(e) {
+                if (!gameState.dragging) return;
+                
+                e.preventDefault();
+                const touch = e.touches[0];
+                gameState.dragCurrentPos = { x: touch.clientX, y: touch.clientY };
+                updateTilePosition();
+            }
+
+            // Обновление позиции перетаскиваемой фигуры
+            function updateTilePosition() {
+                if (!gameState.startTile) return;
+                
+                const tile = getTileElement(gameState.startTile.row, gameState.startTile.col);
+                if (!tile) return;
+                
+                const deltaX = gameState.dragCurrentPos.x - gameState.dragStartPos.x;
+                const deltaY = gameState.dragCurrentPos.y - gameState.dragStartPos.y;
+                
+                // Ограничиваем перемещение в пределах одной клетки
+                const maxMove = 60;
+                const moveX = Math.max(-maxMove, Math.min(maxMove, deltaX));
+                const moveY = Math.max(-maxMove, Math.min(maxMove, deltaY));
+                
+                tile.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1)`;
+            }
+
+            // Обработка отпускания мыши
+            function onMouseUp(e) {
+                if (!gameState.dragging) return;
+                
+                finishDrag();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            // Обработка отпускания пальца
+            function onTouchEnd(e) {
+                if (!gameState.dragging) return;
+                
+                finishDrag();
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+
+            // Завершение свайпа
+            function finishDrag() {
+                if (!gameState.startTile) return;
+                
+                const tile = getTileElement(gameState.startTile.row, gameState.startTile.col);
+                if (tile) {
+                    tile.classList.remove('tile-moving');
+                    tile.style.transform = '';
+                }
+                
+                const deltaX = gameState.dragCurrentPos.x - gameState.dragStartPos.x;
+                const deltaY = gameState.dragCurrentPos.y - gameState.dragStartPos.y;
+                const minSwipeDistance = 30;
+                
+                let targetRow = gameState.startTile.row;
+                let targetCol = gameState.startTile.col;
+                
+                // Определяем направление свайпа
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Горизонтальный свайп
+                    if (Math.abs(deltaX) > minSwipeDistance) {
+                        targetCol += deltaX > 0 ? 1 : -1;
+                    }
+                } else {
+                    // Вертикальный свайп
+                    if (Math.abs(deltaY) > minSwipeDistance) {
+                        targetRow += deltaY > 0 ? 1 : -1;
+                    }
+                }
+                
+                // Проверяем, что целевая позиция в пределах поля и является соседом
+                if (targetRow >= 0 && targetRow < config.rows &&
+                    targetCol >= 0 && targetCol < config.cols &&
+                    areNeighbors(gameState.startTile, { row: targetRow, col: targetCol })) {
+                    // Анимируем плавный обмен
+                    animateSwap(gameState.startTile, { row: targetRow, col: targetCol });
+                } else {
+                    // Если свайп не привел к обмену, просто сбрасываем состояние
+                    gameState.dragging = false;
+                    gameState.startTile = null;
+                }
+            }
+
+            // Анимация плавного обмена фигур
+            function animateSwap(first, second) {
+                if (gameState.isSwapping) return;
+                gameState.isSwapping = true;
+                
+                const firstTile = getTileElement(first.row, first.col);
+                const secondTile = getTileElement(second.row, second.col);
+                
+                // Рассчитываем смещение для анимации
+                const dx = (second.col - first.col) * 100;
+                const dy = (second.row - first.row) * 100;
+                
+                // Анимируем перемещение
+                firstTile.style.transition = 'transform 0.3s ease';
+                secondTile.style.transition = 'transform 0.3s ease';
+                
+                firstTile.style.transform = `translate(${dx}%, ${dy}%)`;
+                secondTile.style.transform = `translate(${-dx}%, ${-dy}%)`;
+                
+                // После анимации меняем фигуры местами
+                setTimeout(() => {
+                    // Меняем значения в массиве
+                    const temp = gameState.board[first.row][first.col];
+                    gameState.board[first.row][first.col] = gameState.board[second.row][second.col];
+                    gameState.board[second.row][second.col] = temp;
+                    
+                    // Обновляем визуальное отображение
+                    firstTile.className = `tile type${gameState.board[first.row][first.col]}`;
+                    secondTile.className = `tile type${gameState.board[second.row][second.col]}`;
+                    
+                    // Сбрасываем трансформации
+                    firstTile.style.transform = '';
+                    secondTile.style.transform = '';
+                    
+                    // Проверяем совпадения
+                    const matches = findMatches();
+                    if (matches.length > 0) {
+                        gameState.isCascade = false;
+                        removeMatches(matches);
+                        updateUI();
+                        showMessage('Хорошо!');
+                        updateShopButtons();
+                    } else {
+                        // Если совпадений нет, возвращаем фигуры на свои места
+                        // Без анимации возврата - сразу меняем обратно
+                        const tempBack = gameState.board[first.row][first.col];
+                        gameState.board[first.row][first.col] = gameState.board[second.row][second.col];
+                        gameState.board[second.row][second.col] = tempBack;
+                        
+                        firstTile.className = `tile type${gameState.board[first.row][first.col]}`;
+                        secondTile.className = `tile type${gameState.board[second.row][second.col]}`;
+                        
+                        gameState.isSwapping = false;
+                        showMessage('Попробуй еще!');
+                    }
+                }, 300);
+            }
+
+            // Проверка, чтобы не было начальных совпадений для поля 7x7
+            function hasInitialMatch(row, col, type) {
+                if (col >= 2 &&
+                    gameState.board[row] &&
+                    gameState.board[row][col-1] === type &&
+                    gameState.board[row][col-2] === type) {
+                    return true;
+                }
+                if (row >= 2 &&
+                    gameState.board[row-1] &&
+                    gameState.board[row-1][col] === type &&
+                    gameState.board[row-2][col] === type) {
+                    return true;
+                }
+                return false;
+            }
+
+            // Проверка наличия возможных ходов
+            function hasPossibleMoves() {
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        if (c < config.cols - 1) {
+                            const temp = gameState.board[r][c];
+                            gameState.board[r][c] = gameState.board[r][c + 1];
+                            gameState.board[r][c + 1] = temp;
+                            
+                            const matches = findMatches();
+                            
+                            gameState.board[r][c + 1] = gameState.board[r][c];
+                            gameState.board[r][c] = temp;
+                            
+                            if (matches.length > 0) {
+                                return true;
+                            }
+                        }
+                        
+                        if (r < config.rows - 1) {
+                            const temp = gameState.board[r][c];
+                            gameState.board[r][c] = gameState.board[r + 1][c];
+                            gameState.board[r + 1][c] = temp;
+                            
+                            const matches = findMatches();
+                            
+                            gameState.board[r + 1][c] = gameState.board[r][c];
+                            gameState.board[r][c] = temp;
+                            
+                            if (matches.length > 0) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                
+                return false;
+            }
+
+            // Поиск возможных ходов для подсказки
+            function findPossibleMove() {
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        if (c < config.cols - 1) {
+                            const temp = gameState.board[r][c];
+                            gameState.board[r][c] = gameState.board[r][c + 1];
+                            gameState.board[r][c + 1] = temp;
+                            
+                            const matches = findMatches();
+                            
+                            gameState.board[r][c + 1] = gameState.board[r][c];
+                            gameState.board[r][c] = temp;
+                            
+                            if (matches.length > 0) {
+                                return {
+                                    first: {row: r, col: c},
+                                    second: {row: r, col: c + 1}
+                                };
+                            }
+                        }
+                        
+                        if (r < config.rows - 1) {
+                            const temp = gameState.board[r][c];
+                            gameState.board[r][c] = gameState.board[r + 1][c];
+                            gameState.board[r + 1][c] = temp;
+                            
+                            const matches = findMatches();
+                            
+                            gameState.board[r + 1][c] = gameState.board[r][c];
+                            gameState.board[r][c] = temp;
+                            
+                            if (matches.length > 0) {
+                                return {
+                                    first: {row: r, col: c},
+                                    second: {row: r + 1, col: c}
+                                };
+                            }
+                        }
+                    }
+                }
+                
+                return null;
+            }
+
+            // Показать подсказку
+            function showHint() {
+                if (!gameState.gameActive || gameState.lives <= 0 || gameState.isSwapping) {
+                    return;
+                }
+                
+                gameState.lives--;
+                updateHearts();
+                
+                const move = findPossibleMove();
+                if (move) {
+                    const firstTile = getTileElement(move.first.row, move.first.col);
+                    const secondTile = getTileElement(move.second.row, move.second.col);
+                    
+                    if (firstTile && secondTile) {
+                        firstTile.classList.add('hint-highlight');
+                        secondTile.classList.add('hint-highlight');
+                        
+                        showMessage(`Подсказка! Поменяй эти фигуры. Жизней осталось: ${gameState.lives}`);
+                        
+                        setTimeout(() => {
+                            firstTile.classList.remove('hint-highlight');
+                            secondTile.classList.remove('hint-highlight');
+                        }, 3000);
+                    }
+                } else {
+                    gameState.lives++;
+                    updateHearts();
+                    showMessage('Нет возможных ходов для подсказки');
+                }
+            }
+
+            // Перемешивание поля
+            function shuffleBoard() {
+                if (!gameState.gameActive || gameState.lives <= 0) return;
+                
+                gameState.lives--;
+                updateHearts();
+                
+                showMessage(`Перемешиваем поле... Жизней осталось: ${gameState.lives}`);
+                shuffleButton.style.display = 'none';
+                
+                let tiles = [];
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        tiles.push(gameState.board[r][c]);
+                    }
+                }
+                
+                for (let i = tiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+                }
+                
+                let index = 0;
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols; c++) {
+                        gameState.board[r][c] = tiles[index++];
+                        updateTileVisual(r, c, gameState.board[r][c]);
+                    }
+                }
+                
+                setTimeout(() => {
+                    if (!hasPossibleMoves()) {
+                        if (gameState.lives <= 0) {
+                            gameState.gameActive = false;
+                            showMessage('Игра окончена! Нет возможных ходов и жизней.');
+                            shuffleButton.style.display = 'none';
+                        } else {
+                            shuffleBoard();
+                        }
+                    } else {
+                        showMessage('Поле перемешано! Продолжай игру.');
+                    }
+                }, 500);
+            }
+
+            // Обработка клика (для ПК)
+            function onTileClick(row, col) {
+                if (!gameState.gameActive || gameState.isSwapping || gameState.dragging) return;
+
+                if (gameState.activeBonus) {
+                    applyBonus(row, col);
+                    return;
+                }
+
+                const tile = getTileElement(row, col);
+                tile.classList.add('selected');
+
+                if (gameState.selectedTile === null) {
+                    gameState.selectedTile = { row, col };
+                } else {
+                    const first = gameState.selectedTile;
+                    const second = { row, col };
+
+                    if (areNeighbors(first, second)) {
+                        animateSwap(first, second);
+                    }
+
+                    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
+                    gameState.selectedTile = null;
+                }
+            }
+
+            // Проверка, являются ли две фигуры соседями
+            function areNeighbors(a, b) {
+                const rowDiff = Math.abs(a.row - b.row);
+                const colDiff = Math.abs(a.col - b.col);
+                return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+            }
+
+            // Поиск совпадений (3+ в ряд) для поля 7x7
+            function findMatches() {
+                const matches = [];
+
+                for (let r = 0; r < config.rows; r++) {
+                    for (let c = 0; c < config.cols - 2; c++) {
+                        const type = gameState.board[r][c];
+                        if (type !== null &&
+                            type === gameState.board[r][c+1] &&
+                            type === gameState.board[r][c+2]) {
+                            let match = [{row: r, col: c}];
+                            let next = c + 1;
+                            while (next < config.cols && gameState.board[r][next] === type) {
+                                match.push({row: r, col: next});
+                                next++;
+                            }
+                            matches.push(match);
+                            c = next - 1;
+                        }
+                    }
+                }
+
+                for (let c = 0; c < config.cols; c++) {
+                    for (let r = 0; r < config.rows - 2; r++) {
+                        const type = gameState.board[r][c];
+                        if (type !== null &&
+                            type === gameState.board[r+1][c] &&
+                            type === gameState.board[r+2][c]) {
+                            let match = [{row: r, col: c}];
+                            let next = r + 1;
+                            while (next < config.rows && gameState.board[next][c] === type) {
+                                match.push({row: next, col: c});
+                                next++;
+                            }
+                            matches.push(match);
+                            r = next - 1;
+                        }
+                    }
+                }
+                return matches;
+            }
+
+            // Удаление совпадений и начисление очков
+            function removeMatches(matchGroups) {
+                let totalTiles = 0;
+                
+                matchGroups.forEach(group => {
+                    group.forEach(cell => {
+                        const pointsPerTile = gameState.isCascade ? config.pointsPerCascadeTile : config.pointsPerTile;
+                        gameState.score += pointsPerTile;
+                        totalTiles++;
+                        gameState.board[cell.row][cell.col] = null;
+                        const tile = getTileElement(cell.row, cell.col);
+                        tile.style.opacity = '0.3';
+                        tile.style.transition = 'opacity 0.3s';
+                    });
+                });
+
+                updateUI();
+                saveMaxScore();
+                
+                const pointsPerTile = gameState.isCascade ? config.pointsPerCascadeTile : config.pointsPerTile;
+                if (gameState.isCascade) {
+                    showMessage(`Каскад! ${totalTiles} × ${pointsPerTile} = +${totalTiles * pointsPerTile} очков`);
+                }
+
+                setTimeout(fillEmptySpaces, 500);
+            }
+
+            // Заполнение пустых мест новыми фигурами для поля 7x7
+            function fillEmptySpaces() {
+                for (let c = 0; c < config.cols; c++) {
+                    let emptySpaces = 0;
+                    for (let r = config.rows - 1; r >= 0; r--) {
+                        if (gameState.board[r][c] === null) {
+                            emptySpaces++;
+                        } else if (emptySpaces > 0) {
+                            gameState.board[r + emptySpaces][c] = gameState.board[r][c];
+                            gameState.board[r][c] = null;
+                            updateTileVisual(r + emptySpaces, c, gameState.board[r + emptySpaces][c]);
+                        }
+                    }
+                    for (let r = 0; r < emptySpaces; r++) {
+                        gameState.board[r][c] = Math.floor(Math.random() * config.tileTypes);
+                        updateTileVisual(r, c, gameState.board[r][c]);
+                    }
+                }
+
+                setTimeout(() => {
+                    const newMatches = findMatches();
+                    if (newMatches.length > 0) {
+                        gameState.isCascade = true;
+                        removeMatches(newMatches);
+                    } else {
+                        gameState.isCascade = false;
+                        gameState.isSwapping = false;
+                        checkGameState();
+                    }
+                }, 500);
+            }
+
+            // Проверка состояния игры
+            function checkGameState() {
+                if (!hasPossibleMoves()) {
+                    if (gameState.lives <= 0) {
+                        gameState.gameActive = false;
+                        showMessage('Игра окончена! Нет возможных ходов и жизней.');
+                        shuffleButton.style.display = 'none';
+                    } else {
+                        showMessage('Нет возможных ходов! Нажми "Перемешать поле"');
+                        shuffleButton.style.display = 'block';
+                    }
+                }
+            }
+
+            // Вспомогательные функции
+            function getTileElement(row, col) {
+                return document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+            }
+
+            function updateTileVisual(row, col, type) {
+                const tile = getTileElement(row, col);
+                if (tile) {
+                    tile.className = `tile type${type}`;
+                    tile.dataset.type = type;
+                    tile.style.opacity = '1';
+                    tile.classList.remove('highlight-red', 'hint-highlight');
+                }
+            }
+
+            function updateUI() {
+                currentScoreElement.textContent = gameState.score.toLocaleString();
+                maxScoreElement.textContent = gameState.maxScore.toLocaleString();
+            }
+
+            function showMessage(text) {
+                messageElement.textContent = text;
+            }
+
+            // Функции для магазина
+            function openShop() {
+                shopOverlay.style.display = 'flex';
+                updateShopButtons();
+            }
+
+            function closeShopWindow() {
+                shopOverlay.style.display = 'none';
+            }
+
+            function updateShopButtons() {
+                // Проверяем, достаточно ли очков для покупки каждого предмета
+                buyRowBtn.disabled = gameState.score < 1000;
+                buyColumnBtn.disabled = gameState.score < 1000;
+                buyBombBtn.disabled = gameState.score < 1500;
+                buyCrossBtn.disabled = gameState.score < 2000;
+                // Жизнь можно купить только если не полное здоровье и хватает очков
+                buyLifeBtn.disabled = gameState.score < 5000 || gameState.lives >= config.maxLives;
+            }
+
+            // Покупка бонусов
+            function buyRow() {
+                if (gameState.score >= 1000) {
+                    gameState.score -= 1000;
+                    gameState.rowCount++;
+                    gameState.activeBonus = 'row';
+                    updateUI();
+                    updateShopButtons();
+                    closeShopWindow();
+                    showMessage('Выбери клетку для удаления всей строки');
+                }
+            }
+
+            function buyColumn() {
+                if (gameState.score >= 1000) {
+                    gameState.score -= 1000;
+                    gameState.columnCount++;
+                    gameState.activeBonus = 'column';
+                    updateUI();
+                    updateShopButtons();
+                    closeShopWindow();
+                    showMessage('Выбери клетку для удаления всего столбца');
+                }
+            }
+
+            function buyBomb() {
+                if (gameState.score >= 1500) {
+                    gameState.score -= 1500;
+                    gameState.bombCount++;
+                    gameState.activeBonus = 'bomb';
+                    updateUI();
+                    updateShopButtons();
+                    closeShopWindow();
+                    showMessage('Выбери клетку (не с краю) для бомбы (3x3 область)');
+                }
+            }
+
+            function buyCross() {
+                if (gameState.score >= 2000) {
+                    gameState.score -= 2000;
+                    gameState.crossCount++;
+                    gameState.activeBonus = 'cross';
+                    updateUI();
+                    updateShopButtons();
+                    closeShopWindow();
+                    showMessage('Выбери центр креста для удаления');
+                }
+            }
+
+            function buyLife() {
+                if (gameState.score >= 5000 && gameState.lives < config.maxLives) {
+                    gameState.score -= 5000;
+                    gameState.lives++;
+                    updateUI();
+                    updateHearts();
+                    updateShopButtons();
+                    closeShopWindow();
+                    showMessage(`+1 жизнь! Теперь у тебя ${gameState.lives} жизней.`);
+                }
+            }
+
+            // Подсветка области для удаления
+            function highlightArea(cells) {
+                clearHighlights();
+                
+                cells.forEach(cell => {
+                    const tile = getTileElement(cell.row, cell.col);
+                    if (tile) {
+                        tile.classList.add('highlight-red');
+                    }
+                });
+            }
+
+            function clearHighlights() {
+                document.querySelectorAll('.tile').forEach(tile => {
+                    tile.classList.remove('highlight-red', 'hint-highlight');
+                });
+            }
+
+            // Применение бонуса
+            function applyBonus(row, col) {
+                if (!gameState.activeBonus) return;
+                
+                let cellsToRemove = [];
+                let highlightCells = [];
+                
+                switch(gameState.activeBonus) {
+                    case 'bomb':
+                        if (row < 1 || row >= config.rows - 1 || col < 1 || col >= config.cols - 1) {
+                            showMessage('Выбери клетку, которая не на краю поля!');
+                            return;
+                        }
+                        
+                        for (let r = row - 1; r <= row + 1; r++) {
+                            for (let c = col - 1; c <= col + 1; c++) {
+                                highlightCells.push({row: r, col: c});
+                            }
+                        }
+                        
+                        highlightArea(highlightCells);
+                        
+                        setTimeout(() => {
+                            for (let r = row - 1; r <= row + 1; r++) {
+                                for (let c = col - 1; c <= col + 1; c++) {
+                                    cellsToRemove.push({row: r, col: c});
+                                }
+                            }
+                            
+                            removeCells(cellsToRemove);
+                            gameState.activeBonus = null;
+                            setTimeout(fillEmptySpaces, 500);
+                        }, 800);
+                        return;
+                        
+                    case 'column':
+                        for (let r = 0; r < config.rows; r++) {
+                            highlightCells.push({row: r, col: col});
+                        }
+                        
+                        highlightArea(highlightCells);
+                        
+                        setTimeout(() => {
+                            for (let r = 0; r < config.rows; r++) {
+                                cellsToRemove.push({row: r, col: col});
+                            }
+                            
+                            removeCells(cellsToRemove);
+                            gameState.activeBonus = null;
+                            setTimeout(fillEmptySpaces, 500);
+                        }, 800);
+                        return;
+                        
+                    case 'row':
+                        for (let c = 0; c < config.cols; c++) {
+                            highlightCells.push({row: row, col: c});
+                        }
+                        
+                        highlightArea(highlightCells);
+                        
+                        setTimeout(() => {
+                            for (let c = 0; c < config.cols; c++) {
+                                cellsToRemove.push({row: row, col: c});
+                            }
+                            
+                            removeCells(cellsToRemove);
+                            gameState.activeBonus = null;
+                            setTimeout(fillEmptySpaces, 500);
+                        }, 800);
+                        return;
+                        
+                    case 'cross':
+                        for (let r = 0; r < config.rows; r++) {
+                            highlightCells.push({row: r, col: col});
+                        }
+                        for (let c = 0; c < config.cols; c++) {
+                            if (c !== col) {
+                                highlightCells.push({row: row, col: c});
+                            }
+                        }
+                        
+                        highlightArea(highlightCells);
+                        
+                        setTimeout(() => {
+                            for (let r = 0; r < config.rows; r++) {
+                                cellsToRemove.push({row: r, col: col});
+                            }
+                            for (let c = 0; c < config.cols; c++) {
+                                if (c !== col) {
+                                    cellsToRemove.push({row: row, col: c});
+                                }
+                            }
+                            
+                            removeCells(cellsToRemove);
+                            gameState.activeBonus = null;
+                            setTimeout(fillEmptySpaces, 500);
+                        }, 800);
+                        return;
+                }
+            }
+
+            // Удаление указанных клеток (для бонусов)
+            function removeCells(cells) {
+                cells.forEach(cell => {
+                    gameState.score += config.pointsPerTile;
+                    gameState.board[cell.row][cell.col] = null;
+                    const tile = getTileElement(cell.row, cell.col);
+                    if (tile) {
+                        tile.style.opacity = '0.3';
+                        tile.style.transition = 'opacity 0.3s';
+                    }
+                });
+                
+                updateUI();
+                saveMaxScore();
+                updateShopButtons();
+            }
+
+            // Обработчики событий
+            resetBtn.addEventListener('click', initGame);
+            hintBtn.addEventListener('click', showHint);
+            shopButton.addEventListener('click', openShop);
+            closeShop.addEventListener('click', closeShopWindow);
+            buyBombBtn.addEventListener('click', buyBomb);
+            buyColumnBtn.addEventListener('click', buyColumn);
+            buyRowBtn.addEventListener('click', buyRow);
+            buyCrossBtn.addEventListener('click', buyCross);
+            buyLifeBtn.addEventListener('click', buyLife);
+            shuffleButton.addEventListener('click', shuffleBoard);
+
+            // Запуск игры
+            initGame();
+        });
+    </script>
+</body>
+</html>
