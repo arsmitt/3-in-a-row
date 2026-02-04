@@ -262,6 +262,17 @@
                 0 0 20px rgba(255, 255, 255, 0.5) !important;
         }
         
+        /* Стили для кнопки выхода */
+        #exitBtn {
+            background: linear-gradient(135deg, rgba(255, 100, 100, 0.2), rgba(255, 80, 80, 0.1));
+            border: 2px solid rgba(255, 100, 100, 0.5);
+        }
+        
+        #exitBtn:hover, #exitBtn:active {
+            background: #ff6b6b;
+            color: white;
+        }
+        
         /* Стили для магазина */
         #shopButton {
             margin-bottom: 15px;
@@ -386,6 +397,60 @@
             transform: none;
         }
         
+        /* Стили для экрана завершения игры */
+        #gameOverOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #gameOverWindow {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        #gameOverWindow h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #FFD166;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        #finalScore {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: white;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+        
+        #gameOverMessage {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+        
+        #gameOverButtons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
         /* Медиа-запросы для адаптации под разные экраны */
         @media (max-height: 800px) {
             #gameBoard {
@@ -423,6 +488,12 @@
             .shopItem {
                 padding: 12px;
                 margin-bottom: 10px;
+            }
+            #gameOverWindow {
+                padding: 20px;
+            }
+            #finalScore {
+                font-size: 2.5rem;
             }
         }
         
@@ -464,6 +535,7 @@
         <div id="controls">
             <button id="hintBtn">Подсказка (-1 жизнь)</button>
             <button id="resetBtn">Новая игра</button>
+            <button id="exitBtn">Выйти из игры</button>
         </div>
         <button id="shuffleButton" style="display: none;">Перемешать поле (-1 жизнь)</button>
     </div>
@@ -515,6 +587,19 @@
             <button id="closeShop">Закрыть</button>
         </div>
     </div>
+    
+    <!-- Оверлей завершения игры -->
+    <div id="gameOverOverlay">
+        <div id="gameOverWindow">
+            <h2>Игра завершена!</h2>
+            <div id="gameOverMessage">Ваш результат:</div>
+            <div id="finalScore">0</div>
+            <div id="gameOverButtons">
+                <button id="restartGameBtn">Новая игра</button>
+                <button id="closeGameOverBtn">Закрыть</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -548,7 +633,9 @@
                 isCascade: false,
                 dragging: false,
                 dragStartPos: null,
-                dragCurrentPos: null
+                dragCurrentPos: null,
+                gameEnded: false,
+                gameStartTime: Date.now()
             };
 
             const gameBoard = document.getElementById('gameBoard');
@@ -558,6 +645,7 @@
             const heartsElement = document.getElementById('hearts');
             const resetBtn = document.getElementById('resetBtn');
             const hintBtn = document.getElementById('hintBtn');
+            const exitBtn = document.getElementById('exitBtn');
             const shopButton = document.getElementById('shopButton');
             const shopOverlay = document.getElementById('shopOverlay');
             const closeShop = document.getElementById('closeShop');
@@ -567,6 +655,13 @@
             const buyCrossBtn = document.getElementById('buyCross');
             const buyLifeBtn = document.getElementById('buyLife');
             const shuffleButton = document.getElementById('shuffleButton');
+            
+            // Элементы завершения игры
+            const gameOverOverlay = document.getElementById('gameOverOverlay');
+            const finalScoreElement = document.getElementById('finalScore');
+            const gameOverMessageElement = document.getElementById('gameOverMessage');
+            const restartGameBtn = document.getElementById('restartGameBtn');
+            const closeGameOverBtn = document.getElementById('closeGameOverBtn');
 
             // Инициализация игры
             function initGame() {
@@ -578,9 +673,11 @@
                 gameState.rowCount = 0;
                 gameState.crossCount = 0;
                 gameState.gameActive = true;
+                gameState.gameEnded = false;
                 gameState.lives = config.maxLives;
                 gameState.isCascade = false;
                 gameState.dragging = false;
+                gameState.gameStartTime = Date.now();
                 createBoard();
                 updateUI();
                 updateHearts();
@@ -589,6 +686,10 @@
                 shuffleButton.style.display = 'none';
                 shuffleButton.disabled = false;
                 hintBtn.disabled = false;
+                exitBtn.disabled = false;
+                
+                // Закрываем экран завершения игры если он открыт
+                gameOverOverlay.style.display = 'none';
                 
                 // Сохраняем максимальный счет
                 saveMaxScore();
@@ -674,7 +775,7 @@
 
             // Обработка начала свайпа (мышь)
             function onTileMouseDown(e, row, col) {
-                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus) return;
+                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus || gameState.gameEnded) return;
                 
                 e.preventDefault();
                 gameState.dragging = true;
@@ -691,7 +792,7 @@
 
             // Обработка начала свайпа (тач)
             function onTileTouchStart(e, row, col) {
-                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus) return;
+                if (!gameState.gameActive || gameState.isSwapping || gameState.activeBonus || gameState.gameEnded) return;
                 
                 e.preventDefault();
                 gameState.dragging = true;
@@ -983,7 +1084,7 @@
 
             // Показать подсказку
             function showHint() {
-                if (!gameState.gameActive || gameState.lives <= 0 || gameState.isSwapping) {
+                if (!gameState.gameActive || gameState.lives <= 0 || gameState.isSwapping || gameState.gameEnded) {
                     return;
                 }
                 
@@ -999,7 +1100,7 @@
                         firstTile.classList.add('hint-highlight');
                         secondTile.classList.add('hint-highlight');
                         
-                        showMessage(`Подсказка! Поменяй эти фигуры. Жизней осталось: ${gameState.lives}`);
+                        showMessage(`Подсказка! Поменяй эти фигуры. Жизней осталость: ${gameState.lives}`);
                         
                         setTimeout(() => {
                             firstTile.classList.remove('hint-highlight');
@@ -1015,12 +1116,12 @@
 
             // Перемешивание поля
             function shuffleBoard() {
-                if (!gameState.gameActive || gameState.lives <= 0) return;
+                if (!gameState.gameActive || gameState.lives <= 0 || gameState.gameEnded) return;
                 
                 gameState.lives--;
                 updateHearts();
                 
-                showMessage(`Перемешиваем поле... Жизней осталось: ${gameState.lives}`);
+                showMessage(`Перемешиваем поле... Жизней осталость: ${gameState.lives}`);
                 shuffleButton.style.display = 'none';
                 
                 let tiles = [];
@@ -1046,9 +1147,7 @@
                 setTimeout(() => {
                     if (!hasPossibleMoves()) {
                         if (gameState.lives <= 0) {
-                            gameState.gameActive = false;
-                            showMessage('Игра окончена! Нет возможных ходов и жизней.');
-                            shuffleButton.style.display = 'none';
+                            gameOver('no_moves');
                         } else {
                             shuffleBoard();
                         }
@@ -1060,7 +1159,7 @@
 
             // Обработка клика (для ПК)
             function onTileClick(row, col) {
-                if (!gameState.gameActive || gameState.isSwapping || gameState.dragging) return;
+                if (!gameState.gameActive || gameState.isSwapping || gameState.dragging || gameState.gameEnded) return;
 
                 if (gameState.activeBonus) {
                     applyBonus(row, col);
@@ -1197,13 +1296,96 @@
             function checkGameState() {
                 if (!hasPossibleMoves()) {
                     if (gameState.lives <= 0) {
-                        gameState.gameActive = false;
-                        showMessage('Игра окончена! Нет возможных ходов и жизней.');
-                        shuffleButton.style.display = 'none';
+                        gameOver('no_moves');
                     } else {
                         showMessage('Нет возможных ходов! Нажми "Перемешать поле"');
                         shuffleButton.style.display = 'block';
                     }
+                }
+            }
+
+            // Функция завершения игры
+            function gameOver(reason = 'exit') {
+                if (gameState.gameEnded) return;
+                
+                gameState.gameEnded = true;
+                gameState.gameActive = false;
+                
+                // Сохраняем максимальный счет
+                saveMaxScore();
+                
+                // Показываем экран завершения игры
+                showGameOverScreen(gameState.score, reason);
+                
+                // Отправляем результат в Telegram-бот
+                sendResultToTelegram(gameState.score, reason);
+            }
+
+            // Показать экран завершения игры
+            function showGameOverScreen(finalScore, reason) {
+                finalScoreElement.textContent = finalScore.toLocaleString();
+                
+                let message = '';
+                switch(reason) {
+                    case 'no_moves':
+                        message = 'У вас закончились жизни и возможные ходы!';
+                        break;
+                    case 'exit':
+                        message = 'Вы вышли из игры. Ваш результат сохранен!';
+                        break;
+                    default:
+                        message = 'Игра завершена!';
+                }
+                
+                gameOverMessageElement.textContent = message;
+                gameOverOverlay.style.display = 'flex';
+                
+                // Отключаем кнопки в основном интерфейсе
+                hintBtn.disabled = true;
+                exitBtn.disabled = true;
+                shuffleButton.disabled = true;
+            }
+
+            // Отправка результата в Telegram
+            function sendResultToTelegram(finalScore, reason) {
+                if (window.Telegram && Telegram.WebApp) {
+                    // Вычисляем время игры в секундах
+                    const gameplayTime = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+                    
+                    // Формируем данные для отправки
+                    const data = {
+                        score: finalScore,  // Обязательное поле!
+                        maxScore: gameState.maxScore, // Максимальный счет за игру
+                        reason: reason, // Причина завершения игры
+                        time: gameplayTime, // Время игры в секундах
+                        livesLeft: gameState.lives, // Оставшиеся жизни
+                        bonuses: {
+                            bomb: gameState.bombCount,
+                            column: gameState.columnCount,
+                            row: gameState.rowCount,
+                            cross: gameState.crossCount
+                        }
+                    };
+                    
+                    // Отправляем результат боту
+                    try {
+                        Telegram.WebApp.sendData(JSON.stringify(data));
+                        console.log('Результат отправлен в Telegram:', data);
+                    } catch (error) {
+                        console.error('Ошибка отправки данных в Telegram:', error);
+                    }
+                    
+                    // Альтернативный вариант (для старых версий)
+                    // if (Telegram.WebApp.invokeCustomMethod) {
+                    //     Telegram.WebApp.invokeCustomMethod('sendData', JSON.stringify(data));
+                    // }
+                } else {
+                    console.log('Telegram Web App не обнаружен. Отправка данных невозможна.');
+                    console.log('Результат игры (для отладки):', {
+                        score: finalScore,
+                        maxScore: gameState.maxScore,
+                        reason: reason
+                    });
                 }
             }
 
@@ -1233,6 +1415,7 @@
 
             // Функции для магазина
             function openShop() {
+                if (gameState.gameEnded) return;
                 shopOverlay.style.display = 'flex';
                 updateShopButtons();
             }
@@ -1243,17 +1426,17 @@
 
             function updateShopButtons() {
                 // Проверяем, достаточно ли очков для покупки каждого предмета
-                buyRowBtn.disabled = gameState.score < 1000;
-                buyColumnBtn.disabled = gameState.score < 1000;
-                buyBombBtn.disabled = gameState.score < 1500;
-                buyCrossBtn.disabled = gameState.score < 2000;
+                buyRowBtn.disabled = gameState.score < 1000 || gameState.gameEnded;
+                buyColumnBtn.disabled = gameState.score < 1000 || gameState.gameEnded;
+                buyBombBtn.disabled = gameState.score < 1500 || gameState.gameEnded;
+                buyCrossBtn.disabled = gameState.score < 2000 || gameState.gameEnded;
                 // Жизнь можно купить только если не полное здоровье и хватает очков
-                buyLifeBtn.disabled = gameState.score < 5000 || gameState.lives >= config.maxLives;
+                buyLifeBtn.disabled = gameState.score < 5000 || gameState.lives >= config.maxLives || gameState.gameEnded;
             }
 
             // Покупка бонусов
             function buyRow() {
-                if (gameState.score >= 1000) {
+                if (gameState.score >= 1000 && !gameState.gameEnded) {
                     gameState.score -= 1000;
                     gameState.rowCount++;
                     gameState.activeBonus = 'row';
@@ -1265,7 +1448,7 @@
             }
 
             function buyColumn() {
-                if (gameState.score >= 1000) {
+                if (gameState.score >= 1000 && !gameState.gameEnded) {
                     gameState.score -= 1000;
                     gameState.columnCount++;
                     gameState.activeBonus = 'column';
@@ -1277,7 +1460,7 @@
             }
 
             function buyBomb() {
-                if (gameState.score >= 1500) {
+                if (gameState.score >= 1500 && !gameState.gameEnded) {
                     gameState.score -= 1500;
                     gameState.bombCount++;
                     gameState.activeBonus = 'bomb';
@@ -1289,7 +1472,7 @@
             }
 
             function buyCross() {
-                if (gameState.score >= 2000) {
+                if (gameState.score >= 2000 && !gameState.gameEnded) {
                     gameState.score -= 2000;
                     gameState.crossCount++;
                     gameState.activeBonus = 'cross';
@@ -1301,7 +1484,7 @@
             }
 
             function buyLife() {
-                if (gameState.score >= 5000 && gameState.lives < config.maxLives) {
+                if (gameState.score >= 5000 && gameState.lives < config.maxLives && !gameState.gameEnded) {
                     gameState.score -= 5000;
                     gameState.lives++;
                     updateUI();
@@ -1332,7 +1515,7 @@
 
             // Применение бонуса
             function applyBonus(row, col) {
-                if (!gameState.activeBonus) return;
+                if (!gameState.activeBonus || gameState.gameEnded) return;
                 
                 let cellsToRemove = [];
                 let highlightCells = [];
@@ -1451,6 +1634,11 @@
             // Обработчики событий
             resetBtn.addEventListener('click', initGame);
             hintBtn.addEventListener('click', showHint);
+            exitBtn.addEventListener('click', () => {
+                if (!gameState.gameEnded) {
+                    gameOver('exit');
+                }
+            });
             shopButton.addEventListener('click', openShop);
             closeShop.addEventListener('click', closeShopWindow);
             buyBombBtn.addEventListener('click', buyBomb);
@@ -1459,6 +1647,12 @@
             buyCrossBtn.addEventListener('click', buyCross);
             buyLifeBtn.addEventListener('click', buyLife);
             shuffleButton.addEventListener('click', shuffleBoard);
+            
+            // Обработчики для экрана завершения игры
+            restartGameBtn.addEventListener('click', initGame);
+            closeGameOverBtn.addEventListener('click', () => {
+                gameOverOverlay.style.display = 'none';
+            });
 
             // Запуск игры
             initGame();
